@@ -1,0 +1,70 @@
+---
+title: "R Statistics For Clinical Trial Data"
+author: "Jeffrey Long"
+date: "`r Sys.Date()`"
+format: html
+editor: source
+---
+
+## Libraries
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# install.packages("tidyverse")
+library(tidyverse)
+# install.packages("rtables")
+library(rtables)
+# if(!require(devtools)) install.packages("devtools")
+# devtools::install_github("kassambara/ggpubr")
+library(ggpubr)
+# tinytex::install_tinytex()
+library(dplyr)
+library(lme4)
+# install.packages("afex")
+library(afex)
+library(plyr)
+
+```
+
+## {rtables} Functions
+
+Building statistical tables for trials.
+
+```{r}
+fournum_afun <- function(x) {
+  in_rows(
+    .list = list(
+      "mean" = mean(x),
+      "sd" = sd(x),
+      "median" = median(x), 
+      "min - max" = range(x)
+    ),
+    .formats = c(
+      "mean" = "xx.xx",
+      "sd" = "xx.xx",
+      "median" = "xx.xx", 
+      "min - max" = "xx.xx - xx.xx")
+  )
+}
+
+data <- read_delim("data_working_file.txt", delim = "\t")
+data <- select(data, 5,10,15,20)
+data$age <- gsub(" Years", "", data$age)
+data$result <- gsub("%", "", data$result)
+data$id <- as.factor(data$id)
+data$age <- as.numeric(data$age)
+data$result <- as.numeric(data$result)
+summary(data)
+
+data$age_group <- ifelse(data$age < 40, "0 to 40", 
+ifelse((data$age >= 40) & (data$age < 60), "40 to 60",
+ifelse(data$age >= 60, "60 or higher", NA)))
+data$age_group <- as.factor(data$age_group)
+
+data$result_group <- ifelse(data$result < 0.5, "0 to 0.5", 
+ifelse((data$result >= 0.5) & (data$result < 0.75), "0.5 to 0.75",
+ifelse(data$result >= 0.75, "0.75 or more", NA)))
+data$result_group <- as.factor(data$result_group)
+
+```
+
