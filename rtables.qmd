@@ -28,7 +28,7 @@ library(plyr)
 
 ## {rtables} Functions
 
-Building statistical tables for trials.
+Prepare functions for statistical tables of trials.
 
 ```{r}
 fournum_afun <- function(x) {
@@ -46,7 +46,13 @@ fournum_afun <- function(x) {
       "min - max" = "xx.xx - xx.xx")
   )
 }
+```
 
+## Data Munging
+
+Derive new data groups for analysis.
+
+```{r}
 data <- read_delim("data_working_file.txt", delim = "\t")
 data <- select(data, 5,10,15,20)
 data$age <- gsub(" Years", "", data$age)
@@ -65,6 +71,75 @@ data$result_group <- ifelse(data$result < 0.5, "0 to 0.5",
 ifelse((data$result >= 0.5) & (data$result < 0.75), "0.5 to 0.75",
 ifelse(data$result >= 0.75, "0.75 or more", NA)))
 data$result_group <- as.factor(data$result_group)
-
 ```
 
+## Tables
+
+
+```{r}
+lyt_p_value <- kruskal.test(result ~ age_group, data = data)
+
+lyt <- basic_table(  
+  title = "Age Group by Test Result",
+  subtitles = "All Samples",
+  main_footer = paste(lyt_p_value),
+  show_colcounts = TRUE
+) |>
+  split_cols_by("age_group") |>
+  analyze("result", fournum_afun)
+tbl <- build_table(lyt, data)
+
+print(tbl)
+```
+
+## Boxplot
+
+```{r}
+fig <- ggplot(data, aes( age_group, result)) +
+        geom_boxplot( outlier.shape=16,
+                      outlier.size=2) + 
+        ggtitle("Age Group by Test Result")+
+        ylab("Log_10 dd-cfDNA") + 
+        xlab("Age Group") + 
+        scale_y_continuous()
+
+fig + scale_y_continuous(trans='log10') + 
+  theme_minimal()
+```
+
+## Bar Plot
+
+Visualize proportion of patients in each group.
+
+```{r}
+data_sorted <- arrange(data, age_group, result_group)
+
+# Barplot of Score Group and Transplant Time Group
+ggplot(data_sorted, aes(fill=result_group, y=`result`, x=age_group)) + 
+  geom_bar(position="fill",stat="identity")+ 
+  scale_fill_brewer(palette="Paired")+
+  ggtitle("Proportion of Test Results by Age Group") +
+  ylab("Relative Frequencies") +
+  xlab("Age Group") +
+  theme_minimal()
+  
+getwd()
+
+write_delim(data_sorted, "data_result_and_age_grouping.txt", delim = "\t")
+```
+
+## LMER Linear Mixed Effects Models
+
+Analysis of all samples as affected by multiple measurements for each patient.
+
+```{r}
+m1 <- lmer(result ~ age_group + (1|USUBJID),
+              na.action = na.omit,
+              data=data )
+summary(m1)
+
+m2 <- lmer(result ~ age_group + (1|USUBJID) + (1|USUBJID:age_group),
+              na.action = na.omit,
+              data=data )
+summary(m2)
+```
