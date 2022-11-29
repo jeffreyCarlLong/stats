@@ -60,17 +60,62 @@ data$result <- gsub("%", "", data$result)
 data$id <- as.factor(data$id)
 data$age <- as.numeric(data$age)
 data$result <- as.numeric(data$result)
-summary(data)
 
-data$age_group <- ifelse(data$age < 40, "0 to 40", 
-ifelse((data$age >= 40) & (data$age < 60), "40 to 60",
-ifelse(data$age >= 60, "60 or higher", NA)))
-data$age_group <- as.factor(data$age_group)
-
+# derive result groupings
 data$result_group <- ifelse(data$result < 0.5, "0 to 0.5", 
 ifelse((data$result >= 0.5) & (data$result < 0.75), "0.5 to 0.75",
 ifelse(data$result >= 0.75, "0.75 or more", NA)))
 data$result_group <- as.factor(data$result_group)
+
+# derive age at event and demographic summary
+data <- data %>% 
+  mutate(birth_date = as.Date(`Birth Date`, "%m/%d/%y"))
+
+data$birth_date <- as.Date(ifelse(data$birth_date > Sys.Date(),
+  format(data$birth_date, "19%y-%m-%d"),
+  format(data$birth_date)))
+
+data <- data %>% mutate(age_at_event = 
+                        trunc(as.numeric(difftime(as.Date(`Event Date`, 
+                                                          "%m/%d/%Y"), 
+                                                  umd$birth_date, 
+                                                  units = "days")) /365.25))
+data_dem <- data %>%
+  dplyr::select(USUBJID, result_group, age_at_event) %>%
+  unique() %>%
+  arrange(result_group, USUBJID)
+
+write_delim(data_dem, "data_dem_for_results_groupings.txt", delim = "\t")
+  
+data %>%
+  dplyr::select(USUBJID, result_group, age_at_event) %>%
+  unique() %>%
+  group_by(result_group) %>%
+  dplyr::summarize(n = n(), mean = mean(age_at_event), sd = sd(age_at_event))
+
+data %>%
+  dplyr::select(USUBJID, result_group) %>%
+  unique() %>%
+  group_by(result_group) %>%
+  dplyr::summarize(n = n())
+
+data %>%
+  dplyr::select(USUBJID, age_at_event) %>%
+  unique() %>%
+  dplyr::summarize(n=n(), mean = mean(age_at_event), sd=sd(age_at_event))
+
+data %>%
+  dplyr::select(USUBJID) %>%
+  unique() %>%
+  dplyr::summarize(n=n())
+  
+# derive age_group
+data$age_group <- ifelse(data$age_at_event < 40, "0 to 40", 
+ifelse((data$age_at_event >= 40) & (data$age_at_event < 60), "40 to 60",
+ifelse(data$age_at_event >= 60, "60 or higher", NA)))
+data$age_group <- as.factor(data$age_group)
+
+summary(data)
 ```
 
 ## Tables
