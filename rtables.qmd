@@ -23,7 +23,7 @@ library(lme4)
 # install.packages("afex")
 library(afex)
 library(plyr)
-
+library(scales)  # for percentage scales
 ```
 
 ## {rtables} Functions
@@ -114,13 +114,15 @@ Visualize proportion of patients in each group.
 ```{r}
 data_sorted <- arrange(data, age_group, result_group)
 
-# Barplot of Score Group and Transplant Time Group
-ggplot(data_sorted, aes(fill=result_group, y=`result`, x=age_group)) + 
+# Barplot of Result Group and Age Group
+ggplot(data_sorted, aes(fill=result_group, y=result, x=age_group)) + 
   geom_bar(position="fill",stat="identity")+ 
   scale_fill_brewer(palette="Paired")+
-  ggtitle("Proportion of Test Results by Age Group") +
-  ylab("Relative Frequencies") +
+  ggtitle("Test Results by Age Group") +
+  ylab("Proportion") +
   xlab("Age Group") +
+  scale_y_continuous(labels=scales::percent) +
+  guides(fill=guide_legend(title="Result Group")) +
   theme_minimal()
   
 getwd()
